@@ -1,0 +1,211 @@
+#include "lcd1602.h"
+
+
+/**********************************
+函数定义
+**********************************/
+/****
+*******1602检测忙函数 
+*****/
+void lcd1602_check_busy()
+{  
+	P0=0xff;
+	do
+	{
+		LCD1602_RS=0;
+		LCD1602_RW=1;
+		LCD1602_E=0;
+		LCD1602_E=1;
+	} while(LCD1602_BUSY==1);
+	LCD1602_E=0;
+}
+
+/****
+*******1602写数据忙函数 
+*****/
+void lcd1602_write_date(uchar date)
+{
+	lcd1602_check_busy();
+	LCD1602_E=0;
+	LCD1602_PORT=date;
+	LCD1602_RS=1;
+	LCD1602_RW=0;
+	LCD1602_E=1;
+	LCD1602_E=0;
+}
+
+/****
+*******1602写命令函数 
+*****/
+void lcd1602_write_com(uchar com)
+{
+	lcd1602_check_busy();
+	LCD1602_E=0;
+	LCD1602_PORT=com;
+	LCD1602_RS=0;
+	LCD1602_RW=0;
+	LCD1602_E=1;
+	LCD1602_E=0;
+}
+
+/****
+*******LCD1602显示字符串函数 
+*******参量定义：	hang：输入显示行数  1 第一行  2 第二行
+*******           add：偏移量，0-15
+*******           dat：所要显示的字符串，输入格式 " "
+*****/
+void lcd1602_display_str(uchar hang, uchar add, uchar *dat)
+{
+	if(hang==1)   
+		lcd1602_write_com(0x80+add);			//第一行
+	else
+		lcd1602_write_com(0x80+0x40+add);	//第二行
+
+	while(*dat != '\0')
+	{
+		lcd1602_write_date(*dat++);
+	
+	}
+}
+/****
+*******1602显示数字(2位)
+*******参量定义：	hang：输入显示行数  1 第一行  2 第二行
+*******           add：偏移量，0-15
+*******           num：所要显示的数据，2位
+*****/
+void lcd1602_display_num_2(uchar hang, uchar add, uint num)
+{
+	if(hang==1)   
+		lcd1602_write_com(0x80+add);				//第一行
+	else
+		lcd1602_write_com(0x80+0x40+add);		//第二行
+
+	lcd1602_write_date(num/10%10+48);			//十
+	lcd1602_write_date(num/1%10+48);			//个
+}
+/****
+*******LCD1602显示数字函数(最大4位)
+*******参量定义：	hang：输入显示行数  1 第一行  2 第二行
+*******           add：偏移量，0-15
+*******           num：所要显示的数据，最大4位
+*****/
+void lcd1602_display_num(uchar hang, uchar add, uint num)
+{
+	if(hang==1)   
+		lcd1602_write_com(0x80+add);				//第一行
+	else
+		lcd1602_write_com(0x80+0x40+add);		//第二行
+
+	
+	if(num >= 1000)
+	{
+		lcd1602_write_date(num/1000%10+48);	//千
+		lcd1602_write_date(num/100%10+48);	//百
+		lcd1602_write_date(num/10%10+48);		//十
+		lcd1602_write_date(num/1%10+48);		//个
+	}
+	else if(num >= 100)
+	{
+		lcd1602_write_date(num/100%10+48);	//百
+		lcd1602_write_date(num/10%10+48);		//十
+		lcd1602_write_date(num/1%10+48);		//个
+		lcd1602_write_date(' ');						//补空格
+	}
+	else if(num >= 10)
+	{
+		lcd1602_write_date(num/10+48);			//十
+		lcd1602_write_date(num%10+48);			//个
+		lcd1602_write_date(' ');						//补空格
+		lcd1602_write_date(' ');						//补空格
+	}
+	else
+	{
+		lcd1602_write_date(num+48);					//个
+		lcd1602_write_date(' ');						//补空格
+		lcd1602_write_date(' ');						//补空格
+		lcd1602_write_date(' ');						//补空格
+	}
+}
+/****
+*******LCD1602显示时间函数
+*******格式：第一行：年-月-日
+*************第二行：时:分:秒 星期(英文缩写)
+*******参量定义：time_buf[8]：时间数组
+*****/
+void lcd_display_alltime(uchar time_buf[8])
+{
+	uint nian;
+	uchar yue,ri,shi,fen,miao,xingqi;
+	
+	nian = time_buf[0]/0x10*1000 + time_buf[0]%0x10*100 + time_buf[1]/0x10*10 + time_buf[1]%0x10;
+	yue = time_buf[2]/0x10*10 + time_buf[2]%0x10;
+	ri = time_buf[3]/0x10*10 + time_buf[3]%0x10;
+	shi = time_buf[4]/0x10*10 + time_buf[4]%0x10;
+	fen = time_buf[5]/0x10*10 + time_buf[5]%0x10;
+	miao = time_buf[6]/0x10*10 + time_buf[6]%0x10;
+	xingqi = time_buf[7]/0x10*10 + time_buf[7]%0x10;
+
+	lcd1602_display_num_2(1,0,nian/100);			//显示年
+	lcd1602_display_num_2(1,2,nian%100);			//显示年
+	lcd1602_write_com(0x84);							//初始位置
+	lcd1602_write_date('-');							//显示 -
+	lcd1602_display_num_2(1,5,yue);				//显示月
+	lcd1602_write_date('-');							//显示 -
+	lcd1602_display_num_2(1,8,ri);				//显示日
+	
+	lcd1602_display_num_2(2,0,shi);				//显示时
+	lcd1602_write_date(':');							//显示 :
+	lcd1602_display_num_2(2,3,fen);				//显示分
+	lcd1602_write_date(':');							//显示 :
+	lcd1602_display_num_2(2,6,miao);			//显示秒
+
+	if(xingqi == 1)
+	{
+		lcd1602_display_str(2,9,"Mon ");			//显示星期一英文缩写
+	}
+	else if(xingqi == 2)
+	{
+		lcd1602_display_str(2,9,"Tues");			//显示星期二英文缩写
+	}
+	else if(xingqi == 3)
+	{
+		lcd1602_display_str(2,9,"Wed ");			//显示星期三英文缩写
+	}
+	else if(xingqi == 4)
+	{
+		lcd1602_display_str(2,9,"Thur");			//显示星期四英文缩写
+	}
+	else if(xingqi == 5)
+	{
+		lcd1602_display_str(2,9,"Fri ");			//显示星期五英文缩写
+	}
+	else if(xingqi == 6)
+	{
+		lcd1602_display_str(2,9,"Sat ");			//显示星期六英文缩写
+	}
+	else
+	{
+		lcd1602_display_str(2,9,"Sun ");			//显示星期天英文缩写
+	}
+}
+
+/****
+*******LCD1602清屏函数 
+*****/
+void lcd1602_clean()
+{
+	lcd1602_display_str(1,0,"                        ");
+	lcd1602_display_str(2,0,"                        ");
+}
+
+/****
+*******LCD1602初始化函数 
+*****/
+void Lcd1602_Init()
+{
+	lcd1602_write_com(0x38);
+	lcd1602_write_com(0x0c);
+	lcd1602_write_com(0x06);
+	lcd1602_write_com(0x01);
+}
+
