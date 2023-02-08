@@ -1,0 +1,33 @@
+
+int main()
+{
+int sum=0;
+int k=1;
+int a=1;
+int n=0;
+int i=1;
+int l=0;
+printf ("请输入计算数字(整数)");
+scanf("%d",&n);
+
+l=n;
+for(k=1;k<n+1;k++,l--)
+{
+for(i=1,a=1;i<l+1;i++)
+{
+a=i*a;
+}
+sum=sum+a;
+}
+printf("%d\n",sum);
+
+
+	
+	
+	//int ch=0;
+//while ((ch=getchar()) !=EOF)
+//{
+//putchar(ch);
+//}
+	return 0;
+}
